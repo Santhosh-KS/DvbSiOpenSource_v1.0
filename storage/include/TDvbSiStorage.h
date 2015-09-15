@@ -1,4 +1,3 @@
-//
 // DVB_SI for Reference Design Kit (RDK)
 //
 // Copyright (C) 2015  
@@ -15,7 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA.
 
 #ifndef TDVBSISTORAGE_H
 #define TDVBSISTORAGE_H
@@ -97,14 +96,6 @@ private:
   uint32_t BarkerSymbolRate;
   uint32_t BarkerEitTimout; 
   TDvbStorageNamespace::TModulationMode BarkerModulationMode;
-#if 0
-  std::vector<uint16_t> HomeBouquetsVector;
-  uint32_t BarkerFrequency;
-  TDvbStorageNamespace::TModulationMode BarkerModulationMode;
-  uint32_t BarkerSymbolRate;
-  uint32_t BackGroundScanInterval; 
-  uint32_t BarkerEitTimout; 
-#endif
   std::map<uint16_t, std::shared_ptr<TNitTable>> NitTableMap; 
   void HandleNitEvent(const TNitTable& nit);
   void ProcessNitEventCache(const TNitTable& nit);
@@ -132,12 +123,6 @@ private:
   int64_t ProcessEvent(const TEitTable& eit);
   int64_t ProcessEventItem(const std::vector<TMpegDescriptor>& descList, int64_t event_fk);
 
-  // Scan thread related functions
-  std::thread ScanThreadObject;
-  void ScanThread(bool bFast);
-  bool IsFastScanEnabled();
-  bool IsBackgroundScanEnabled();
-  bool ScanHome();
   bool CheckCacheTableCollections(std::vector<std::shared_ptr<TSiTable>>& tables, int timeout);
   std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetIdCache(uint16_t nId);
   std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> GetServiceListByTsIdCache(uint16_t nId, uint16_t tsId);

@@ -1,3 +1,4 @@
+//
 // DVB_SI for Reference Design Kit (RDK)
 //
 // Copyright (C) 2015  
@@ -14,7 +15,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA.
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "TDvbSiStorage.h"
 #include "oswrap.h"
@@ -1107,247 +1108,6 @@ int64_t  TDvbSiStorage::ProcessEventItem(const std::vector<TMpegDescriptor>& des
   return  eventItem_fk; 
 }
 
-// Scan thread related methods
-void TDvbSiStorage::ScanThread(bool bFast)
-{
-  OS_LOG(DVB_INFO,   "%s(): created(%d)\n", __FUNCTION__, bFast);
-  while (true) {
-    if (bFast) {
-      DvbScanStatus.ScanState = TDvbScanState::SCAN_IN_PROGRESS_FAST;
-      if (!IsFastScanEnabled()) {
-        OS_LOG(DVB_ERROR,   "%s(): IsFastScanEnabled() failed\n", __FUNCTION__);
-        DvbScanStatus.ScanState = TDvbScanState::SCAN_FAILED;
-      }
-      else {
-        // It's enough to run the fast scan only once
-        bFast = false;
-        continue;
-      }
-    }
-    else {
-      DvbScanStatus.ScanState = TDvbScanState::SCAN_IN_PROGRESS_BKGD;
-      if (!IsBackgroundScanEnabled()) {
-        OS_LOG(DVB_ERROR,   "%s(): IsBackgroundScanEnabled() failed\n", __FUNCTION__);
-        DvbScanStatus.ScanState = TDvbScanState::SCAN_FAILED;
-      }
-      else {
-        OS_LOG(DVB_INFO,   "%s(): scan completed successfully\n", __FUNCTION__);
-        DvbScanStatus.ScanState = TDvbScanState::SCAN_COMPLETED;
-      }
-    }
-    StorageDb.Audits();
-    // Let's check if we need to stop the scan
-    {
-       std::unique_lock<std::mutex> lk(ScanMutex);
-       // TODO: Handle spurious wake-ups
-       if (ThreadScanCondition.wait_for(lk, std::chrono::seconds(bFast ? 30 : BackGroundScanInterval)) == std::cv_status::no_timeout) {
-         OS_LOG(DVB_INFO,   "%s(): stopping\n", __FUNCTION__);
-         DvbScanStatus.ScanState = TDvbScanState::SCAN_STOPPED;
-// TODO: KSS Terminate this thread properly. Else it becomes a zombie and haunts you.
-         return;
-       }
-     }
-   }
-}
-
-bool TDvbSiStorage::IsFastScanEnabled()
-{
-  OS_LOG(DVB_INFO, "%s: Started\n", __FUNCTION__);
-  DvbScanStatus.TsList.clear();
-  if (!ScanHome()) {
-    OS_LOG(DVB_ERROR,   "%s: ScanHome() failed\n", __FUNCTION__);
-    return false;
-  }
-//    rmf_DvbTuner tuner;
-
-  std::vector<std::shared_ptr<TStorageTransportStreamStruct>> tsList = GetTsListByNetIdCache(PreferredNetworkId);
-  for (auto it = tsList.begin(), end = tsList.end(); it != end; ++it) {
-    TDvbSiTableStatus status;
-    // collect SDTa & EITa pf
-    TSdtTable* sdt = new TSdtTable((uint8_t)TTableId::TABLE_ID_SDT, (*it)->TransportStreamId, 0, true);
-    sdt->SetOriginalNetworkId((*it)->NetworkId);
-    std::vector<std::shared_ptr<TSiTable>> tables;
-    tables.emplace_back(sdt);
-    std::vector<std::shared_ptr<ServiceStruct>> serviceList = GetServiceListByTsIdCache((*it)->NetworkId, (*it)->TransportStreamId);
-    for (auto srv = serviceList.begin(), end = serviceList.end(); srv != end; ++srv) {
-      OS_LOG(DVB_DEBUG,   "%s:%d: Adding EITpf(0x%x.0x%x.0x%x) to the list\n",
-        __FUNCTION__, __LINE__, (*it)->NetworkId, (*it)->TransportStreamId, (*srv)->ServiceId);
-
-      TEitTable* eit = new TEitTable((uint8_t)TTableId::TABLE_ID_EIT_PF, (*srv)->ServiceId, 0, true);
-      eit->SetNetworkId((*it)->NetworkId);
-      eit->SetTsId((*it)->TransportStreamId);
-      tables.emplace_back(eit);
-    }
-    if (IsFastScan && CheckCacheTableCollections(tables, 0)) {
-      OS_LOG(DVB_INFO, "%s:%d: SDTa(0x%x.0x%x) & EITa pf already received. Skipping.\n",
-        __FUNCTION__, __LINE__, (*it)->NetworkId, sdt->GetTableExtensionId());
-      status.SdtAcquired = true;
-      status.EitPfAcquired = true;
-    }
-    else {
-      OS_LOG(DVB_INFO,   "%s:%d: tune(%d)\n", __FUNCTION__, __LINE__, (*it)->Frequency);
-// TODO: KSS
-#if 0
-            RMFResult ret = tuner.tune((*it)->Frequency, (*it)->modulation, (*it)->symbolRate);
-            if(ret != RMF_RESULT_SUCCESS)
-            {
-                OS_LOG(DVB_ERROR,   "%s(): tune(%d) failed with 0x%x\n", __FUNCTION__, (*it)->Frequency, ret);
-            }
-#endif
-      OS_LOG(DVB_INFO,   "%s:%d: Collecting SDTa & EITs pf\n", __FUNCTION__, __LINE__);
-      if (CheckCacheTableCollections(tables, SDT_TIMEOUT > EIT_PF_TIMEOUT ? SDT_TIMEOUT : EIT_PF_TIMEOUT)) {
-        OS_LOG(DVB_INFO,   "%s:%d: SDT(0x%x.0x%x) & EITs pf received\n",
-          __FUNCTION__, __LINE__, (*it)->NetworkId, sdt->GetTableExtensionId());
-        status.SdtAcquired = true;
-        status.EitPfAcquired = true;
-      }
-      else {
-        OS_LOG(DVB_ERROR,   "%s:%d: SDT(0x%x.0x%x) and/or EITs pf not received\n",
-        __FUNCTION__, __LINE__, (*it)->NetworkId, sdt->GetTableExtensionId());
-      }
-      OS_LOG(DVB_INFO,   "%s:%d: untune(%d)\n", __FUNCTION__, __LINE__, (*it)->Frequency);
-// TODO: KSS
-        //tuner.untune();
-    }
-    DvbScanStatus.TsList.emplace_back((*it)->Frequency, status);
-  }
-  OS_LOG(DVB_ERROR,   "%s:%d: Done\n", __FUNCTION__, __LINE__);
-  return true;
-}
-
-bool TDvbSiStorage::IsBackgroundScanEnabled()
-{
-  OS_LOG(DVB_INFO,   "%s: Started\n", __FUNCTION__);
-  DvbScanStatus.TsList.clear();
-
-  if (!ScanHome()) {
-    OS_LOG(DVB_ERROR,   "%s: ScanHome() failed\n", __FUNCTION__);
-    return false;
-  }
-// TODO: KSS
-//    rmf_DvbTuner tuner;
-  std::vector<std::shared_ptr<TSiTable>> fullEitSchedule;
-  std::vector<std::shared_ptr<TStorageTransportStreamStruct>> tsList = GetTsListByNetIdCache(PreferredNetworkId);
-  for (auto it = tsList.begin(), end = tsList.end(); it != end; ++it) {
-    TDvbSiTableStatus status;
-    OS_LOG(DVB_INFO,   "%s:%d: tune(%d)\n", __FUNCTION__, __LINE__, (*it)->Frequency);
-// TODO: KSS
-#if 0
-        RMFResult ret = tuner.tune((*it)->Frequency, (*it)->modulation, (*it)->SymbolRate);
-        if(ret != RMF_RESULT_SUCCESS)
-        {
-            OS_LOG(DVB_ERROR,   "%s(): tune(%d) failed with 0x%x\n", __FUNCTION__, (*it)->Frequency, ret);
-        }
-#endif
-    // collect SDTa & EITa pf
-    // SDTa
-    TSdtTable* sdt = new TSdtTable((uint8_t)TTableId::TABLE_ID_SDT, (*it)->TransportStreamId, 0, true);
-    sdt->SetOriginalNetworkId((*it)->NetworkId);
-
-    std::vector<std::shared_ptr<TSiTable>> tables;
-    std::vector<std::shared_ptr<TSiTable>> eitSchedule;
-    tables.emplace_back(sdt);
-
-    OS_LOG(DVB_INFO,   "%s:%d: Collecting SDTa(0x%x.0x%x)\n",
-      __FUNCTION__, __LINE__, (*it)->NetworkId, sdt->GetTableExtensionId());
-    if (CheckCacheTableCollections(tables, SDT_TIMEOUT)) {
-      OS_LOG(DVB_INFO,   "%s:%d: SDTa(0x%x.0x%x) received\n",
-        __FUNCTION__, __LINE__, (*it)->NetworkId, sdt->GetTableExtensionId());
-      status.SdtAcquired = true;
-    }
-    else {
-      OS_LOG(DVB_ERROR,   "%s:%d: SDTa(0x%x.0x%x) not received\n",
-       __FUNCTION__, __LINE__, (*it)->NetworkId, sdt->GetTableExtensionId());
-     }
-     tables.clear();
-
-     //EITa shed & EITa pf
-     std::vector<std::shared_ptr<ServiceStruct>> serviceList = GetServiceListByTsIdCache((*it)->NetworkId, (*it)->TransportStreamId);
-     for (auto srv = serviceList.begin(), end = serviceList.end(); srv != end; ++srv) {
-       OS_LOG(DVB_DEBUG,   "%s:%d: Adding EITsched(0x%x.0x%x.0x%x) to the list\n",
-         __FUNCTION__, __LINE__, (*it)->NetworkId, (*it)->TransportStreamId, (*srv)->ServiceId);
-
-       TEitTable* eitSched = new TEitTable((uint8_t)TTableId::TABLE_ID_EIT_SCHED_START, (*srv)->ServiceId, 0, true);
-       eitSched->SetNetworkId((*it)->NetworkId);
-       eitSched->SetTsId((*it)->TransportStreamId);
-       eitSchedule.emplace_back(eitSched);
-
-       TEitTable* eit = new TEitTable((uint8_t)TTableId::TABLE_ID_EIT_PF, (*srv)->ServiceId, 0, true);
-       eit->SetNetworkId((*it)->NetworkId);
-       eit->SetTsId((*it)->TransportStreamId);
-       tables.emplace_back(eit);
-     }
-     fullEitSchedule.insert(fullEitSchedule.end(), eitSchedule.begin(), eitSchedule.end());
-
-     OS_LOG(DVB_INFO,   "%s:%d: Collecting EITa pf\n", __FUNCTION__, __LINE__);
-     if (CheckCacheTableCollections(tables, EIT_PF_TIMEOUT)) {
-       OS_LOG(DVB_INFO,   "%s:%d: EITa pf received\n",
-         __FUNCTION__, __LINE__);
-       status.EitPfAcquired = true;
-     }
-     else {
-       OS_LOG(DVB_ERROR,   "%s:%d: EITa pf not received\n",
-         __FUNCTION__, __LINE__);
-     }
-     if ((*it)->Frequency != BarkerFrequency) {
-       OS_LOG(DVB_INFO,   "%s:%d: Collecting EITa sched\n", __FUNCTION__, __LINE__);
-       if (CheckCacheTableCollections(eitSchedule, EIT_8_DAY_SCHED_TIMEOUT)) {
-         OS_LOG(DVB_INFO,   "%s:%d: EITsched received\n", __FUNCTION__, __LINE__);
-         status.EitAcquired = true;
-       }
-       else {
-         OS_LOG(DVB_ERROR,   "%s:%d: EITsched not received\n", __FUNCTION__, __LINE__);
-       }
-     }
-     else {
-       OS_LOG(DVB_INFO,   "%s:%d: Not collecting EITa sched on barker(%d)\n",
-         __FUNCTION__, __LINE__, (*it)->Frequency);
-     }
-     OS_LOG(DVB_INFO,   "%s:%d: untune(%d)\n", __FUNCTION__, __LINE__, (*it)->Frequency);
-// TODO: KSS
-//        tuner.untune();
-
-      DvbScanStatus.TsList.emplace_back((*it)->Frequency, status);
-  }
-
-  // Sitting on barker ts
-  if (BarkerFrequency && BarkerModulationMode && BarkerSymbolRate) {
-    TDvbSiTableStatus status;
-    // Clear cached EIT tables
-    {
-      OS_LOG(DVB_DEBUG,   "%s:%d: Clearing cached EIT tables\n", __FUNCTION__, __LINE__);
-      std::lock_guard<std::mutex> lock(CacheDataMutex);
-      EitTableMap.clear();
-    }
-
-    OS_LOG(DVB_INFO,   "%s:%d: tune(%d) barker\n", __FUNCTION__, __LINE__, BarkerFrequency);
-// TODO: KSS
-#if 0
-        RMFResult ret = tuner.tune(BarkerFrequency, BarkerModulationMode, BarkerSymbolRate);
-        if(ret != RMF_RESULT_SUCCESS)
-        {
-            OS_LOG(DVB_ERROR,   "%s(): tune(%d) failed with 0x%x\n", __FUNCTION__, BarkerFrequency, ret);
-        }
-#endif
-      OS_LOG(DVB_INFO,   "%s:%d: Collecting EIT sched (barker)\n", __FUNCTION__, __LINE__);
-      if (CheckCacheTableCollections(fullEitSchedule, BarkerEitTimout)) {
-        OS_LOG(DVB_INFO,   "%s:%d: EITsched received (barker)\n", __FUNCTION__, __LINE__);
-        status.EitAcquired = true;
-      }
-      else {
-        OS_LOG(DVB_ERROR,   "%s:%d: EITsched not received (barker)\n", __FUNCTION__, __LINE__);
-      }
-
-      OS_LOG(DVB_INFO,   "%s:%d: untune(%d)\n", __FUNCTION__, __LINE__, BarkerFrequency);
-// TODO: KSS
-//        tuner.untune();
-
-        DvbScanStatus.TsList.emplace_back(BarkerFrequency, status);
-  }
-  OS_LOG(DVB_INFO,   "%s:%d: Done\n", __FUNCTION__, __LINE__);
-  return true;
-}
-
 std::vector<std::shared_ptr<TStorageTransportStreamStruct>> TDvbSiStorage::GetTsListByNetIdCache(uint16_t nId)
 {
   std::vector<std::shared_ptr<TStorageTransportStreamStruct>> ret;
@@ -1494,75 +1254,6 @@ std::vector<std::shared_ptr<ServiceStruct>> TDvbSiStorage::GetServiceListByTsIdC
   return ret;
 }
 
-bool TDvbSiStorage::ScanHome()
-{
-  TDvbSiTableStatus status;
-  // Let's start over clean slate
-  ClearCachedTables();
-// TODO: KSS remove tuner dependencies
-#if 0
-  rmf_DvbTuner tuner;
-
-    OS_LOG(DVB_INFO,   "%s:%d: tuning to home ts(%d)\n", __FUNCTION__, __LINE__, HomeTsFrequency);
-    RMFResult ret = tuner.tune(HomeTsFrequency, HomeTsModulationMode, HomeTsSymbolRate);
-    if(ret != RMF_RESULT_SUCCESS)
-    {
-        OS_LOG(DVB_ERROR,   "%s(): tune(%d) failed with 0x%x\n", __FUNCTION__, HomeTsFrequency, ret);
-        // scan failed
-        return false;
-    }
-#endif
-  std::vector<std::shared_ptr<TSiTable>> tables;
-  // NIT
-  tables.emplace_back(new TNitTable((uint8_t)TTableId::TABLE_ID_NIT, PreferredNetworkId, 0, true));
-  // BAT(s)
-  for (auto it = HomeBouquetsVector.begin(), end = HomeBouquetsVector.end(); it != end; ++it) {
-    OS_LOG(DVB_DEBUG,   "%s:%d: Adding BAT(0x%x) to the list\n", __FUNCTION__, __LINE__, *it);
-    tables.emplace_back(new TBatTable((uint8_t)TTableId::TABLE_ID_BAT, *it, 0, true));
-  }
-  OS_LOG(DVB_INFO,   "%s:%d: Collecting NIT & BAT(s)\n", __FUNCTION__, __LINE__);
-  if (CheckCacheTableCollections(tables, NIT_TIMEOUT > BAT_TIMEOUT ? NIT_TIMEOUT : BAT_TIMEOUT)) {
-    OS_LOG(DVB_INFO,   "%s:%d: NIT & BAT(s) found\n", __FUNCTION__, __LINE__);
-    status.NitAcquired = true;
-    status.BatAcquired = true;
-  }
-  else {
-    OS_LOG(DVB_ERROR,   "%s:%d: NIT & BAT(s) not found\n", __FUNCTION__, __LINE__);
-    return false;
-  }
-  tables.clear();
-  // Collect SDT & EIT pf(optional)
-  std::vector<std::shared_ptr<TStorageTransportStreamStruct>> tsList = GetTsListByNetIdCache(PreferredNetworkId);
-  for (auto it = tsList.begin(), end = tsList.end(); it != end; ++it) {
-    if (!IsFastScan) {
-      if (HomeTsFrequency == (*it)->Frequency) {
-        OS_LOG(DVB_DEBUG,   "%s:%d: Adding SDT(0x%x.0x%x) actual to the list\n",
-        __FUNCTION__, __LINE__, (*it)->NetworkId, (*it)->TransportStreamId);
-        TSdtTable* sdt = new TSdtTable((uint8_t)TTableId::TABLE_ID_SDT, (*it)->TransportStreamId, 0, true);
-        sdt->SetOriginalNetworkId((*it)->NetworkId);
-        tables.emplace_back(sdt);
-        break;
-      }
-    }
-    else {
-      OS_LOG(DVB_DEBUG,   "%s:%d: Adding SDT(0x%x.0x%x) to the list\n",
-        __FUNCTION__, __LINE__, (*it)->NetworkId, (*it)->TransportStreamId);
-      TSdtTable* sdt = new TSdtTable((uint8_t)TTableId::TABLE_ID_SDT, (*it)->TransportStreamId, 0, true);
-      sdt->SetOriginalNetworkId((*it)->NetworkId);
-      tables.emplace_back(sdt);
-    }
-  }
-  if (CheckCacheTableCollections(tables, IsFastScan ? SDT_OTHER_TIMEOUT : SDT_TIMEOUT)) {
-    OS_LOG(DVB_INFO,   "%s:%d: All SDTs received\n", __FUNCTION__, __LINE__);
-    status.SdtAcquired = true;
-  }
-  else {
-    OS_LOG(DVB_ERROR,   "%s:%d: All SDTs not received\n", __FUNCTION__, __LINE__);
-  }
-  DvbScanStatus.TsList.emplace_back(HomeTsFrequency, status);
-  return true;
-}
-
 TModulationMode TDvbSiStorage::MapModulationMode(TDVBConstellation in)
 {
   TModulationMode out;
@@ -1670,57 +1361,6 @@ void TDvbSiStorage::SetBarkerInfo(const uint32_t& barkerFreq, const TModulationM
   BarkerFrequency = barkerFreq;
   BarkerSymbolRate = barkSymbRate;
   BarkerModulationMode = barkMod;
-}
-#if 0
-void TDvbSiStorage::StopScanThread()
-{
-  OS_LOG(DVB_INFO, "%s(): called\n", __FUNCTION__);
-  std::unique_lock<std::mutex> lk(ScanMutex);
-  if (DvbScanStatus.ScanState == TDvbScanState::SCAN_STOPPED) {
-    OS_LOG(DVB_INFO,   "%s(): scan is already stopped\n", __FUNCTION__);
-    return;
-  }
-  while (DvbScanStatus.ScanState != TDvbScanState::SCAN_STOPPED) {
-    OS_LOG(DVB_INFO,   "%s(): sending stop request\n", __FUNCTION__);
-    lk.unlock();
-    ThreadScanCondition.notify_one();
-    sleep(3);
-    lk.lock();
-  }
-  if (ScanThreadObject.joinable()) {
-    ScanThreadObject.join();
-  }
-  OS_LOG(DVB_INFO,   "%s(): done\n", __FUNCTION__);
-}
-#endif
-
-// IDvbStorageSubject
-
-void TDvbSiStorage::RegisterDvbStorageObserver(IDvbStorageObserver* observerObject)
-{
-  ObserverVector.push_back(observerObject);
-}
-
-void TDvbSiStorage::RemoveDvbStorageObserver(IDvbStorageObserver* observerObject)
-{
-  ObserverVector.erase(std::remove(ObserverVector.begin(), ObserverVector.end(), observerObject), ObserverVector.end());
-}
-
-void TDvbSiStorage::NotifyDvbStorageTuneObserver(const uint32_t& freq, const TModulationMode& mod,
-    const uint32_t& symbol,const uint8_t& tuneIndex)
-{
-  std::vector<IDvbStorageObserver*>::const_iterator iter = ObserverVector.begin();
-  for (; iter != ObserverVector.end(); ++iter) {
-    (*iter)->Tune(freq, mod, symbol, tuneIndex);
-  }
-}
-
-void TDvbSiStorage::NotifyDvbStorageUnTuneObserver()
-{
-  std::vector<IDvbStorageObserver*>::const_iterator iter = ObserverVector.begin();
-  for (; iter != ObserverVector.end(); ++iter) {
-    (*iter)->UnTune();
-  }
 }
 
 void TDvbSiStorage::DoBackGroundScan()
@@ -1957,4 +1597,33 @@ void TDvbSiStorage::DoHomeScanDataProcess()
     OS_LOG(DVB_ERROR,   "%s:%d: All SDTs not received\n", __FUNCTION__, __LINE__);
   }
   DvbScanStatus.TsList.emplace_back(HomeTsFrequency, status);
+}
+
+// IDvbStorageSubject
+
+void TDvbSiStorage::RegisterDvbStorageObserver(IDvbStorageObserver* observerObject)
+{
+  ObserverVector.push_back(observerObject);
+}
+
+void TDvbSiStorage::RemoveDvbStorageObserver(IDvbStorageObserver* observerObject)
+{
+  ObserverVector.erase(std::remove(ObserverVector.begin(), ObserverVector.end(), observerObject), ObserverVector.end());
+}
+
+void TDvbSiStorage::NotifyDvbStorageTuneObserver(const uint32_t& freq, const TModulationMode& mod,
+    const uint32_t& symbol,const uint8_t& tuneIndex)
+{
+  std::vector<IDvbStorageObserver*>::const_iterator iter = ObserverVector.begin();
+  for (; iter != ObserverVector.end(); ++iter) {
+    (*iter)->Tune(freq, mod, symbol, tuneIndex);
+  }
+}
+
+void TDvbSiStorage::NotifyDvbStorageUnTuneObserver()
+{
+  std::vector<IDvbStorageObserver*>::const_iterator iter = ObserverVector.begin();
+  for (; iter != ObserverVector.end(); ++iter) {
+    (*iter)->UnTune();
+  }
 }
