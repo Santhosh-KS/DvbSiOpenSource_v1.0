@@ -20,8 +20,10 @@
 #ifndef TSITABLE_H
 #define TSITABLE_H
 
-enum class TTableId : uint8_t
-{
+#include <stdint.h>
+
+//enum class TTableId : uint8_t
+enum TTableId {
   TABLE_ID_PAT = 0x00,                  //!< PAT
   TABLE_ID_CAT = 0x01,                  //!< CAT
   TABLE_ID_PMT = 0x02,                  //!< PMT
@@ -47,8 +49,8 @@ enum class TTableId : uint8_t
   TABLE_ID_USER_DEFINED_END = 0xfe      //!< USER_DEFINED_END
 };
 
-enum class TRunningStatus : uint8_t
-{
+//enum class TRunningStatus : uint8_t
+enum TRunningStatus {
   STATUS_UNDEFINED = 0,         //!< UNDEFINED
   STATUS_NOT_RUNNING,           //!< NOT_RUNNING
   STATUS_STARTS_IN_FEW_SECONDS, //!< STARTS_IN_FEW_SECONDS

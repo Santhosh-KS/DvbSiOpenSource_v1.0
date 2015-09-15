@@ -1,24 +1,8 @@
-//
-// DVB_SI for Reference Design Kit (RDK)
-//
-// Copyright (C) 2015  
-//
-// This library is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public
-// License as published by the Free Software Foundation; either
-// version 2.1 of the License, or (at your option) any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public
-// License along with this library; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifndef TDVBDB_H
 #define TDVBDB_H
+
+#include "TDvbStorageNamespace.h"
 
 // C system includes
 #include <sys/time.h>
@@ -83,22 +67,11 @@ public:
 
 typedef std::vector<std::string>  StringVector;
 
-/**
- * DVB Db class. Provides an application layer support for a Database suport.
- */
 class TDvbDb
 {
 private:
 class TRepair;
 class TDbSetting;
-
-  // TFileStatus - DvbDb open return codes
-  enum TFileStatus {
-    FILE_STATUS_ERROR,
-    FILE_STATUS_INVALID_NAME,
-    FILE_STATUS_OPENED,
-    FILE_STATUS_CREATED
-  };
 
   // Database - sanity return codes
   enum TSanityStatus {
@@ -131,15 +104,10 @@ class TDbSetting;
   };
 
 
-  /**
-  * open database file
-  *
-  * @param int flags SQLITE open/create flags SQLITE_OPEN_READWRITE or SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
-  * @return TFileStatus CREATE enumeration upon success otherwise an error.
-  */
-  TFileStatus OpenDb(int flags);
-
-  TFileStatus CreateDbFile();
+  // open database file
+  // @param int flags SQLITE open/create flags SQLITE_OPEN_READWRITE or SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+  // return TFileStatus CREATE enumeration upon success otherwise an error.
+  TDvbStorageNamespace::TFileStatus OpenDb(int flags);
 
   // Create DVB database schema
   void CreateSchema();
@@ -166,60 +134,46 @@ class TDbSetting;
   // Repair class. Used to perform update SQL commands later
   class TRepair
   {
-    public:
-      enum
-      {
-        NUM_TRIES = 3  // Maximum number of times to attempt to peform Update SQL command
-      };
+  public:
+    enum {
+      NUM_TRIES = 3  // Maximum number of times to attempt to peform Update SQL command
+     };
+    bool SqlCommandStatus;
+    int32_t SqlCmdUpdateCount;
+    std::string  SqlUpdateCommandString;
 
-      // bool fixed
-      bool SqlCommandStatus;
-//    int32_t count;
-      int32_t SqlCmdUpdateCount;
-      std::string  fixStr;
-      std::string  SqlUpdateCommandString;
-
-      TRepair (std::string fStr)
+    TRepair (std::string fStr)
       : SqlCommandStatus (false),
         SqlCmdUpdateCount (0),
         SqlUpdateCommandString (fStr)
-      {
-        // Empty
-      }
+    {
+      // Empty
+    }
+    //  Update command succeded. Predicate function for remove_if operation to remove from collection
+    //  @param rhs reference to a constant Repair object in collection
+    //  @return bool true means to remove from collection; false to keep
+    static bool GetSqlCommandStatus (const TRepair& rhs)
+    {
+      return  rhs.SqlCommandStatus;
+    }
 
-      /**
-      * Update command succeded. Predicate function for remove_if operation to remove from collection
-      *
-      * @param rhs reference to a constant Repair object in collection
-      * @return bool true means to remove from collection; false to keep
-      */
-      static bool GetSqlCommandStatus (const TRepair& rhs)
-      {
-        return  rhs.SqlCommandStatus;
-      }
-
-      /**
-      * Maximum number of attempts to perform update comamand. Predicate function for remove_if operation to remove from collection
-      *
-      * @param rhs reference to a constant Repair object in collection
-      * @return bool true means to remove from collection; false to keep
-      */
-      static bool IsSqlUpdateCommandCountExpired (const TRepair& rhs)
-      {
-        return  (rhs.SqlCmdUpdateCount > static_cast<int32_t> (NUM_TRIES));
-      }
+    //  Maximum number of attempts to perform update comamand. Predicate function for remove_if operation to remove from collection
+    //  @param rhs reference to a constant Repair object in collection
+    //  @return bool true means to remove from collection; false to keep
+    static bool IsSqlUpdateCommandCountExpired (const TRepair& rhs)
+    {
+      return  (rhs.SqlCmdUpdateCount > static_cast<int32_t> (NUM_TRIES));
+    }
   };
 
-  /**
-  * TDbSetting class stores the  Environment variables in the database.
-  */
+  // TDbSetting class stores the  Environment variables in the database.
   class TDbSetting
   {
   public:
-    TDbSetting()
-    {
-      // Empty
-    };
+    std::string  EnvironmentVariableName;
+    std::string  EnvironmentVariableValue;
+    TDbSetting() { /*Empty*/ }
+    ~TDbSetting() { /*Empty*/ }
 
     TDbSetting(std::string var, std::string val)
     : EnvironmentVariableName(var),
@@ -227,58 +181,19 @@ class TDbSetting;
     {
       // Empty
     };
-    ~TDbSetting()
-    {
-      // Empty
-    }
-
-    //std::string  variable;
-    std::string  EnvironmentVariableName;
-//  std::string  value;
-    std::string  EnvironmentVariableValue;
   };
 
 public:
   enum {
     CMD_STR_LEN = 512
   };
-#if 0
-  // TFileStatus - DvbDb open return codes
-  enum TFileStatus {
-    FILE_STATUS_ERROR,
-    FILE_STATUS_INVALID_NAME,
-    FILE_STATUS_OPENED,
-    FILE_STATUS_CREATED
-  };
-
-  // Database - sanity return codes
-  enum TSanityStatus {
-    SANITY_STATUS_UNKNOWN,
-    SANITY_STATUS_EMPTY,
-    SANITY_STATUS_POPULATED,
-    SANITY_STATUS_CORRUPT,
-    SANITY_STATUS_FULL,
-    SANITY_STATUS_STALE
-  };
-#endif
   TDvbDb();
   ~TDvbDb();
+  TDvbStorageNamespace::TFileStatus CreateDbFile(const std::string& dbname);
+  inline void UpdateTotStatus(bool val) { IsTotReceived = val; }
+  inline bool GetTotStatus() { return  IsTotReceived; }
 
-  TFileStatus CreateDbFile(std::string dbname);
   void CloseDbFile();
-
-  void UpdateTotStatus(bool val)
-  //void setTotReceived(bool val)
-  {
-    IsTotReceived = val;
-  }
-
-  bool GetTotStatus()
-  // bool getTotReceived()
-  {
-    return  IsTotReceived;
-  }
-
   size_t GetEnvVariablesFromDb();
   const char* GetScanSetting(const char* variable);
   void SetScanSetting(const char* variable, const char* value);
@@ -349,34 +264,19 @@ public:
   class TCommand
   {
   private:
-    TCommand();
+    bool CommandObjectStatus;
+    TDvbDb& DvbDbHandle;
+    std::shared_ptr<sqlite3pp::command> Sqlite3ppWrapperCommand;
+    
     // Disable Copy Constructor
+    TCommand();
     TCommand(const TCommand& other) = delete;
     TCommand& operator=(const TCommand&) = delete;
-
-        /**
-         * TCommand object status
-         */
-        bool CommandObjectStatus;
-
-        /**
-         * DvbDb object reference
-         */
-        TDvbDb& DvbDbHandle;
-
-        /**
-         * shared pointer of a sqlite3pp command object
-         */
-        std::shared_ptr<sqlite3pp::command> Sqlite3ppWrapperCommand;
-
   public:
     TCommand(TDvbDb& handle, std::string cmdBuf);
     ~TCommand();
 
-    bool IsCommandObjectValid()
-    {
-      return CommandObjectStatus;
-    };
+    inline bool IsCommandObjectValid() { return CommandObjectStatus; }
 
     // Bind variable to SQL command statement.
     // @param int32_t index (1's base) of the argument to bind the NULL TYPE variable to
@@ -419,12 +319,10 @@ public:
     bool TransctionObjectStatus;
     std::shared_ptr<sqlite3pp::transaction> Sqlite3ppWrapperTransaction;
     
-    TTransaction();
     // Disable Copy Constructor
+    TTransaction();
     TTransaction(const TTransaction& other) = delete;
     TTransaction& operator=(const TTransaction&) = delete;
-
-
   public:
     TTransaction(TDvbDb& handle);
     ~TTransaction();
@@ -434,11 +332,7 @@ public:
 
     // Rollback or do NOT commit the group of SQL statement to the database
     void RollBackSqlStatement();
-
-    bool IsTransactionObjectValid()
-    {
-      return  TransctionObjectStatus;
-    };
+    inline bool IsTransactionObjectValid() { return  TransctionObjectStatus; }
   };
 };
 

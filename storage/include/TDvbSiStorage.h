@@ -15,165 +15,60 @@
 //
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 #ifndef TDVBSISTORAGE_H
 #define TDVBSISTORAGE_H
 
-// C system includes
-
-// C++ system includes
-#include <mutex>
-#include <map>
-#include <utility>
-#include <vector>
-#include <string>
-#include <tuple>
-#include <memory>
-#include <thread>
-#include <condition_variable>
-
-// Other libraries' includes
-
-// Project's includes
-//#include "rmf_osal_event.h"
-//#include "rmf_osal_thread.h"
-//#include "rmf_qamsrc_common.h"
+#include "IDvbStorageSubject.h"
+#include "IDvbStorageObserver.h"
+#include "TBatTable.h"
 #include "TDvbDb.h"
+#include "TDvbStorageNamespace.h"
+#include "TEitTable.h"
+#include "TNitTable.h"
+#include "TSdtTable.h"
+#include "TSiTable.h"
+#include "TTransportStream.h"
+#include "TTotTable.h"
 
-/**
- * TDvbStorageNamespace namespace
- */
-namespace TDvbStorageNamespace
-{
-  enum TModulationMode {
-    MODULATION_MODE_UNKNOWN=0,
-    MODULATION_MODE_QPSK,
-    MODULATION_MODE_BPSK,
-    MODULATION_MODE_OQPSK,
-    MODULATION_MODE_VSB8,
-    MODULATION_MODE_VSB16,
-    MODULATION_MODE_QAM16,
-    MODULATION_MODE_QAM32,
-    MODULATION_MODE_QAM64,
-    MODULATION_MODE_QAM80,
-    MODULATION_MODE_QAM96,
-    MODULATION_MODE_QAM112,
-    MODULATION_MODE_QAM128,
-    MODULATION_MODE_QAM160,
-    MODULATION_MODE_QAM192,
-    MODULATION_MODE_QAM224,
-    MODULATION_MODE_QAM256,
-    MODULATION_MODE_QAM320,
-    MODULATION_MODE_QAM384,
-    MODULATION_MODE_QAM448,
-    MODULATION_MODE_QAM512,
-    MODULATION_MODE_QAM640,
-    MODULATION_MODE_QAM768,
-    MODULATION_MODE_QAM896,
-    MODULATION_MODE_QAM1024,
-    MODULATION_MODE_QAM_NTSC // for analog mode
-  };
+#include <condition_variable>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <stdint.h>
+#include <string>
+#include <thread>
+#include <tuple>
+#include <vector>
 
-  /**
-  * TransportStream structure. Used to represent a Transport Stream from storage collections.
-  */
-  typedef struct TStorageTransportStream {
-    TStorageTransportStream(uint32_t fr, TModulationMode mod,
-      uint32_t sym, uint16_t net, uint16_t ts)
-      : Frequency(fr),
-        Modulation(mod),
-        SymbolRate (sym),
-        NetworkId(net),
-        TransportStreamId(ts)
-    {
-      // Empty
-    }
-    uint32_t Frequency;
-    TModulationMode Modulation;
-    uint32_t SymbolRate;
-    uint16_t NetworkId;
-    uint16_t TransportStreamId;
-  } TStorageTransportStreamStruct;
-
-  /**
-  * Service structure. Used to represent a Service from the storage collections.
-  */
-  typedef struct Service {
-    Service(uint16_t net, uint16_t ts, uint16_t id, std::string name)
-    : NetworkId(net),
-      TransportStreamId(ts),
-      ServiceId(id),
-      ServiceName(std::move(name))
-    {
-      // Empty
-    }
-    uint16_t NetworkId;
-    uint16_t TransportStreamId;
-    uint16_t ServiceId;
-    std::string ServiceName;
-  } ServiceStruct;
-
-  /**
-  * Event structure. Used to represent an Event from the storage collections.
-  */
-  typedef struct Event {
-    uint16_t NetworkId;
-    uint16_t TransportStreamId;
-    uint16_t ServiceId;
-    uint16_t EventId;
-    uint64_t StartTime;
-    uint32_t Duration;
-    std::string EventName;
-    std::string EventText;
-  } EventStruct;
-
-  /**
-  * Inband table info structure. Used to describe a table from a DVB profile.
-  */
-  typedef struct InbandTableInfo {
-    InbandTableInfo(uint16_t p, uint8_t id, uint16_t extId)
-    : Pid(p),
-      ExtensionId(extId),
-      TableId(id)
-    {
-      // Empty
-    }
-    uint16_t Pid;
-    uint16_t ExtensionId;
-    uint8_t  TableId;
-  } InbandTableInfoStruct;
-} // Namespace
-
-// Forward declarations
-class TSiTable;
-class TNitTable;
-class TSdtTable;
-class TEitTable;
-class TTotTable;
-class TBatTable;
-class TTransportStream;
-
-/**
- * TDvbSiStorage class. Main controller class for collecting and storing DVB SI data.
- */
-class TDvbSiStorage
+class TDvbSiStorage : IDvbStorageSubject
 {
 private:
-  // DvbScan timeout values
-  enum {
-    NIT_TIMEOUT = 15,
-    NIT_OTHER_TIMEOUT = 15,
-    SDT_TIMEOUT = 5,
-    SDT_OTHER_TIMEOUT = 15,
-    BAT_TIMEOUT = 15,
-    EIT_PF_TIMEOUT = 5,
-    EIT_PF_OTHER_TIMEOUT = 15,
-    EIT_8_DAY_SCHED_TIMEOUT = 15,
-    EIT_PAST_8_DAY_SCHED_TIMEOUT = 60,
+  const uint32_t& HomeTsFrequency;
+  const TDvbStorageNamespace::TModulationMode& HomeTsModulationMode;
+  const uint32_t& HomeTsSymbolRate;
+  const uint16_t& PreferredNetworkId;
+  const std::string& DbFilePath;
+  uint32_t BackGroundScanInterval; 
+  bool IsFastScan;
+  uint8_t TunerIndex;
+  TDvbDb StorageDb;
+  std::mutex CacheDataMutex;
+  std::mutex ScanMutex;
+  std::condition_variable ThreadScanCondition;
+  std::vector<IDvbStorageObserver*> ObserverVector;
+
+  enum TDVBConstellation {
+    DVB_CONSTELLATION_UNDEFINED,
+    DVB_CONSTELLATION_QAM16,
+    DVB_CONSTELLATION_QAM32,
+    DVB_CONSTELLATION_QAM64,
+    DVB_CONSTELLATION_QAM128,
+    DVB_CONSTELLATION_QAM256
   };
 
-  enum class TDvbScanState {
+  enum TDvbScanState {
     SCAN_STOPPED,
     SCAN_STARTING,
     SCAN_IN_PROGRESS_FAST,
@@ -190,145 +85,80 @@ private:
     bool EitAcquired;
   };
 
+
   struct TDvbScanStatus {
     TDvbScanState ScanState;
     std::vector<std::pair<uint32_t, TDvbSiTableStatus>> TsList;
   };
 
-  static std::mutex SiStorageMutex;
-  std::mutex CacheDataMutex;
-  std::mutex ScanMutex;
-
+  TDvbScanStatus DvbScanStatus;
+  std::vector<uint16_t> HomeBouquetsVector;
+  uint32_t BarkerFrequency;
+  uint32_t BarkerSymbolRate;
+  uint32_t BarkerEitTimout; 
+  TDvbStorageNamespace::TModulationMode BarkerModulationMode;
 #if 0
-    /**
-     *  Handle to the event queue
-     */
-    rmf_osal_eventqueue_handle_t m_eventQueueId;
-
-    /**
-     *  Thread id
-     */
-    // TODO: Consider moving to std::thread
-    rmf_osal_ThreadId m_threadId;
-#endif
-
-  TDvbDb StorageDb;
-  std::map<uint16_t, std::shared_ptr<TNitTable>> NitTableMap;
-  std::map<std::pair<uint16_t, uint16_t>, std::shared_ptr<TSdtTable>> SdtTableMap;
-  std::map<std::tuple<uint16_t, uint16_t, uint16_t, bool>, std::shared_ptr<TEitTable>> TEitTableMap;
-  std::map<uint16_t, std::shared_ptr<TBatTable>> TBatTableMap;
-
-
-  uint16_t PreferredNetworkId;
-  bool IsFastScan;
-  uint32_t HomeTsFrequency;
-  TDvbStorageNamespace::TModulationMode HomeTsModulationMode;
-  uint32_t HomeTsSymbolRate;
   std::vector<uint16_t> HomeBouquetsVector;
   uint32_t BarkerFrequency;
   TDvbStorageNamespace::TModulationMode BarkerModulationMode;
   uint32_t BarkerSymbolRate;
-  uint32_t BackGroundScanInterval;
-  uint32_t BarkerEitTimout;
-
-  std::thread ScanThreadObject;
-  TDvbScanStatus DvbScanStatus;
-  std::condition_variable ThreadScanCondition;
-  std::string DvbConfigProfileFile;
-
-  // Disable Default Copy Constructor
-  TDvbSiStorage();
-  TDvbSiStorage(const TDvbSiStorage& other)  = delete;
-  TDvbSiStorage& operator=(const TDvbSiStorage&)  = delete;
-
-  void HandleTableEvent(const TSiTable& tbl);
+  uint32_t BackGroundScanInterval; 
+  uint32_t BarkerEitTimout; 
+#endif
+  std::map<uint16_t, std::shared_ptr<TNitTable>> NitTableMap; 
   void HandleNitEvent(const TNitTable& nit);
-  void HandleSdtEvent(const TSdtTable& sdt);
-  void HandleEitEvent(const TEitTable& eit);
-  void HandleTotEvent(const TTotTable& tot);
-  void HandleBatEvent(const TBatTable& tot);
   void ProcessNitEventCache(const TNitTable& nit);
-  void ProcessSdtEventCache(const TSdtTable& sdt);
-  void ProcessEitEventCache(const TEitTable& eit);
-  void ProcessBatEventCache(const TBatTable& bat);
   void ProcessNitEventDb(const TNitTable& nit);
-  void ProcessSdtEventDb(const TSdtTable& sdt);
-  void ProcessEitEventDb(const TEitTable& eit);
-  void ProcessBatEventDb(const TBatTable& bat);
-  // returns foreign key
   int64_t ProcessNetwork(const TNitTable& nit);
-  int64_t ProcessBouquet(const TBatTable& bat);
   int64_t ProcessTransport(const TTransportStream& ts, int64_t network_fk);
+  
+  std::map<std::pair<uint16_t, uint16_t>, std::shared_ptr<TSdtTable>> SdtTableMap;
+  void HandleSdtEvent(const TSdtTable& sdt);
+  void ProcessSdtEventCache(const TSdtTable& sdt);
+  void ProcessSdtEventDb(const TSdtTable& sdt);
   int64_t ProcessService(const TSdtTable& sdt);
+  void HandleTotEvent(const TTotTable& tot);
+
+  std::map<uint16_t, std::shared_ptr<TBatTable>> BatTableMap;
+  void HandleBatEvent(const TBatTable& bat);
+  void ProcessBatEventCache(const TBatTable& bat);
+  void ProcessBatEventDb(const TBatTable& bat);
+  int64_t ProcessBouquet(const TBatTable& bat);
+
+  std::map<std::tuple<uint16_t, uint16_t, uint16_t, bool>, std::shared_ptr<TEitTable>> EitTableMap;
+  void HandleEitEvent(const TEitTable& eit);
+  void ProcessEitEventCache(const TEitTable& eit);
+  void ProcessEitEventDb(const TEitTable& eit);
   int64_t ProcessEvent(const TEitTable& eit);
   int64_t ProcessEventItem(const std::vector<TMpegDescriptor>& descList, int64_t event_fk);
-  // TODO: KSS check if this thread is required.
-  void StartMonitorThread();
-  void StopMonitorThread();
 
-  bool StartScan(bool isFastScanOn);
-  void StopScan();
-
-  void ScanThread(bool isFastScanOn);
-  bool ScanHome();
-
+  // Scan thread related functions
+  std::thread ScanThreadObject;
+  void ScanThread(bool bFast);
   bool IsFastScanEnabled();
   bool IsBackgroundScanEnabled();
+  bool ScanHome();
   bool CheckCacheTableCollections(std::vector<std::shared_ptr<TSiTable>>& tables, int timeout);
-  bool LoadSettings();
+  std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetIdCache(uint16_t nId);
+  std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> GetServiceListByTsIdCache(uint16_t nId, uint16_t tsId);
+  TDvbStorageNamespace::TModulationMode MapModulationMode(TDVBConstellation in);
   void ClearCachedTables();
 public:
+  TDvbSiStorage(const uint32_t& homeTsFreq, const TDvbStorageNamespace::TModulationMode& modulation,
+    const uint32_t& homeTsSymbRate, const uint16_t& prefNetworkId, const std::string& dbFile);
+  ~TDvbSiStorage();
+  TDvbStorageNamespace::TFileStatus CreateDatabase();
+  void HandleTableEvent(const TSiTable& tbl);
+  void DoHomeScanDataProcess();
+  void DoFastScan();
+  void DoBackGroundScan();
+  void SetBarkerInfo(const uint32_t& barkerFreq, const TDvbStorageNamespace::TModulationMode& barkMod, const uint32_t& barkSymbRate);
 
-
-  ~TDvbSiStorage()
-  {
-    // Empty
-  }
-
-  inline uint16_t GetPreferredNetworkId() const
-  {
-    return PreferredNetworkId;
-  }
-
-  inline void SetPreferredNetworkId(uint16_t id)
-  {
-    PreferredNetworkId = id;
-  }
-
-  void EventMonitorThread();
-  // TODO: KSS Re-evaluate the singleton instance of TDvbSiStorage.
-  static TDvbSiStorage* getInstance()
-  {
-    std::lock_guard<std::mutex> lock(SiStorageMutex);
-    static TDvbSiStorage instance;
-    return &instance;
-  }
-
-#if 0
-    /**
-     * Return queue handle for event monitor thread
-     *
-     * @return rmf_oscal_eventqueue 
-     */
-    rmf_osal_eventqueue_handle_t getInputQueue();
-#endif
-  std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetId(uint16_t nId = 0);
-  std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetIdCache(uint16_t nId = 0);
-  std::vector<std::shared_ptr<TDvbStorageNamespace::EventStruct>> GetEventListByServiceId(uint16_t nId, uint16_t tsId, uint16_t sId);
-  std::vector<std::shared_ptr<TDvbStorageNamespace::EventStruct>> GetEventListByServiceIdCache(uint16_t nId, uint16_t tsId, uint16_t sId);
-  std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> GetServiceListByTsId(uint16_t nId, uint16_t tsId);
-  std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> GetServiceListByTsIdCache(uint16_t nId, uint16_t tsId);
-
-  TDvbScanStatus GetScanStatus();
-  std::vector<std::shared_ptr<TDvbStorageNamespace::InbandTableInfoStruct>> GetInbandTableInfo(std::string& profile);
-
-  // return string configuration file (json)
-  std::string GetProfiles();
-
-  //  Set the DVB profile configuration file
-  //  @param profiles configuration file in a string (json)
-  //  @return true if successfull and false otherwise
-  bool SetProfiles(std::string& profiles);
+  // IDvbStorageSubject
+  virtual void RegisterDvbStorageObserver(IDvbStorageObserver* observerObject);
+  virtual void RemoveDvbStorageObserver(IDvbStorageObserver* observerObject);
+  virtual void NotifyDvbStorageTuneObserver(const uint32_t& freq, const TDvbStorageNamespace::TModulationMode& mod,
+    const uint32_t& symbol,const uint8_t& tuneIndex);
+  virtual void NotifyDvbStorageUnTuneObserver();
 };
-
-#endif
+#endif // TDVBSISTORAGE_H
