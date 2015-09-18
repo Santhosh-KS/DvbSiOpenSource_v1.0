@@ -29,7 +29,7 @@ public:
   virtual void RegisterDvbStorageObserver(IDvbStorageObserver* observerObject) = 0;
   virtual void RemoveDvbStorageObserver(IDvbStorageObserver* observerObject) = 0;
   virtual void NotifyDvbStorageTuneObserver(const uint32_t& freq, const TDvbStorageNamespace::TModulationMode& mod,
-    const uint32_t& symbol,const uint8_t& tuneIndex) = 0;
+    const uint32_t& symbol) = 0;
   virtual void NotifyDvbStorageUnTuneObserver() = 0;
 };
 

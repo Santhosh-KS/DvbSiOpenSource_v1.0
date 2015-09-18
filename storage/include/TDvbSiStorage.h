@@ -51,6 +51,7 @@ private:
   const std::string& DbFilePath;
   uint32_t BackGroundScanInterval; 
   bool IsFastScan;
+  bool CurrentTuneStatus;
   uint8_t TunerIndex;
   TDvbDb StorageDb;
   std::mutex CacheDataMutex;
@@ -96,6 +97,14 @@ private:
   uint32_t BarkerSymbolRate;
   uint32_t BarkerEitTimout; 
   TDvbStorageNamespace::TModulationMode BarkerModulationMode;
+#if 0
+  std::vector<uint16_t> HomeBouquetsVector;
+  uint32_t BarkerFrequency;
+  TDvbStorageNamespace::TModulationMode BarkerModulationMode;
+  uint32_t BarkerSymbolRate;
+  uint32_t BackGroundScanInterval; 
+  uint32_t BarkerEitTimout; 
+#endif
   std::map<uint16_t, std::shared_ptr<TNitTable>> NitTableMap; 
   void HandleNitEvent(const TNitTable& nit);
   void ProcessNitEventCache(const TNitTable& nit);
@@ -123,27 +132,34 @@ private:
   int64_t ProcessEvent(const TEitTable& eit);
   int64_t ProcessEventItem(const std::vector<TMpegDescriptor>& descList, int64_t event_fk);
 
+  // Scan thread related functions
+  std::thread ScanThreadObject;
+  void ScanThread();
+  bool IsFastScanEnabled();
+  bool IsBackgroundScanEnabled();
+  bool ScanHome();
   bool CheckCacheTableCollections(std::vector<std::shared_ptr<TSiTable>>& tables, int timeout);
   std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetIdCache(uint16_t nId);
   std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> GetServiceListByTsIdCache(uint16_t nId, uint16_t tsId);
   TDvbStorageNamespace::TModulationMode MapModulationMode(TDVBConstellation in);
   void ClearCachedTables();
+  bool IsTuneDone();
 public:
   TDvbSiStorage(const uint32_t& homeTsFreq, const TDvbStorageNamespace::TModulationMode& modulation,
     const uint32_t& homeTsSymbRate, const uint16_t& prefNetworkId, const std::string& dbFile);
   ~TDvbSiStorage();
   TDvbStorageNamespace::TFileStatus CreateDatabase();
   void HandleTableEvent(const TSiTable& tbl);
-  void DoHomeScanDataProcess();
-  void DoFastScan();
-  void DoBackGroundScan();
   void SetBarkerInfo(const uint32_t& barkerFreq, const TDvbStorageNamespace::TModulationMode& barkMod, const uint32_t& barkSymbRate);
+  void UpdateScanType(bool isFastScan);
+  void UpdateTuneStatus(bool isTuneSuccess);
+  static void ScanThreadInit(void *arg);
 
   // IDvbStorageSubject
   virtual void RegisterDvbStorageObserver(IDvbStorageObserver* observerObject);
   virtual void RemoveDvbStorageObserver(IDvbStorageObserver* observerObject);
   virtual void NotifyDvbStorageTuneObserver(const uint32_t& freq, const TDvbStorageNamespace::TModulationMode& mod,
-    const uint32_t& symbol,const uint8_t& tuneIndex);
+    const uint32_t& symbol);
   virtual void NotifyDvbStorageUnTuneObserver();
 };
 #endif // TDVBSISTORAGE_H

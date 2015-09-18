@@ -24,7 +24,7 @@
 
 class IDvbStorageObserver {
 public:
-  virtual void Tune(const uint32_t& freq, const TDvbStorageNamespace::TModulationMode& mod, const uint32_t& symbol, const uint8_t& tuneIndex) = 0;
+  virtual void Tune(const uint32_t& freq, const TDvbStorageNamespace::TModulationMode& mod, const uint32_t& symbol) = 0;
   virtual void UnTune() = 0;
 };
 
