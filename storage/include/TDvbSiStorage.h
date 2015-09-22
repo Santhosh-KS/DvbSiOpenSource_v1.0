@@ -135,9 +135,9 @@ private:
   bool IsBackgroundScanEnabled();
   bool ScanHome();
   bool CheckCacheTableCollections(std::vector<std::shared_ptr<TSiTable>>& tables, int timeout);
+  TDvbStorageNamespace::TModulationMode MapModulationMode(TDVBConstellation in);
   std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetIdCache(uint16_t nId);
   std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> GetServiceListByTsIdCache(uint16_t nId, uint16_t tsId);
-  TDvbStorageNamespace::TModulationMode MapModulationMode(TDVBConstellation in);
   void ClearCachedTables();
   bool IsTuneDone();
 public:
@@ -151,6 +151,7 @@ public:
   void UpdateTuneStatus(bool isTuneSuccess);
   static void ScanThreadInit(void *arg);
 
+  std::vector<shared_ptr<TStorageTransportStreamStruct>> GetTsListByNetId(uint16_t nId);
   std::vector<std::shared_ptr<TDvbStorageNamespace::InbandTableInfoStruct>> GetInbandTableInfo(std::string& profile);
   std::string GetProfiles();
   bool SetProfiles(std::string& profiles);

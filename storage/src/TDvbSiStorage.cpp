@@ -1752,3 +1752,60 @@ bool TDvbSiStorage::SetProfiles(std::string& profiles)
 {
   return JsonParser->SetProfiles(profiles);
 }
+
+vector<shared_ptr<TStorageTransportStreamStruct>> TDvbSiStorage::GetTsListByNetId(uint16_t nId)
+{
+  vector<shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> ret;
+  uint16_t networkId;
+
+  if (nId != 0) {
+    networkId = nId;
+  }
+  else if (PreferredNetworkId != 0) {
+    networkId = PreferredNetworkId;
+  }
+  else {
+    OS_LOG(DVB_ERROR,   "<%s> Invalid network id: %d, 0x%x\n", __FUNCTION__, nId, nId);
+    return ret;
+  }
+
+  std::string cmdStr("SELECT t.original_network_id, t.transport_id, t.frequency, t.Modulation, t.symbol_rate " \
+    "FROM Transport t INNER JOIN Network n "                                                  \
+    "ON t.network_fk = n.network_pk "                                                         \
+    "WHERE n.network_id = ");
+
+  std::stringstream ss;
+  ss << networkId;
+  cmdStr += ss.str();
+  cmdStr += " ORDER BY t.transport_id ASC;";
+
+  std::vector<std::vector<std::string>> results = StorageDb.QueryDb(cmdStr);
+
+  OS_LOG(DVB_DEBUG,   "<%s> nid = %d num rows: %lu\n", __FUNCTION__, networkId, results.size());
+
+  for (std::vector<std::vector<std::string>>::iterator it = results.begin(); it != results.end(); ++it) {
+    std::vector<std::string> row = *it;
+    // 5 columns specified in select statement
+    if (row.size() == 5) {
+      int onId;
+      int tsId;
+      int frequency;
+      int symbolRate;
+      int mod;
+      std::stringstream(row.at(0)) >> onId;
+      std::stringstream(row.at(1)) >> tsId;
+      std::stringstream(row.at(2)) >> frequency;
+      std::stringstream(row.at(3)) >> mod;
+      std::stringstream(row.at(4)) >> symbolRate;
+      
+      OS_LOG(DVB_DEBUG,   "<%s> onId: %d tsId: %d frequency: %d mod: %d symbolRate: %d\n", __FUNCTION__, onId, tsId, frequency, mod, symbolRate);
+
+      std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct> ts(new TStorageTransportStreamStruct(static_cast<uint32_t>(frequency),
+        mapModulationMode((DVBConstellation)mod),
+        static_cast<uint32_t>(symbolRate), static_cast<uint16_t>(onId),
+        static_cast<uint16_t>(tsId)));
+        ret.push_back(ts);
+    }
+  }
+  return ret;
+}
