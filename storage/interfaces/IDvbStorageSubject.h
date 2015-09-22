@@ -17,8 +17,8 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-#ifndef IDVBSTORAGEOBSERVER_H
-#define IDVBSTORAGEOBSERVER_H
+#ifndef IDVBSTORAGESUBJECT_H
+#define IDVBSTORAGESUBJECT_H
 
 #include "IDvbStorageObserver.h"
 #include "TDvbStorageNamespace.h"
@@ -33,4 +33,4 @@ public:
   virtual void NotifyDvbStorageUnTuneObserver() = 0;
 };
 
-#endif // IDVBSECTIONPARSERSUBJECT_H
+#endif // IDVBSTORAGESUBJECT_H

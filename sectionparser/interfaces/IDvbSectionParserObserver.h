@@ -17,8 +17,8 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-#ifndef IDVBSECTIONPARSEROBSERVER
-#define IDVBSECTIONPARSEROBSERVER
+#ifndef IDVBSECTIONPARSEROBSERVER_H
+#define IDVBSECTIONPARSEROBSERVER_H
 
 #include <cstddef>
 #include <cstdint>
@@ -28,4 +28,4 @@ public:
   virtual void SendEvent(uint32_t eventType, void *eventData, size_t dataSize) = 0;
 };
 
-#endif // IDVBSECTIONPARSEROBSERVER 
+#endif // IDVBSECTIONPARSEROBSERVER_H 
