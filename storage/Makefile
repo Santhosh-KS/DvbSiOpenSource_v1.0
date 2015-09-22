@@ -9,7 +9,7 @@ SRC_DIR := src
 OBJ_DIR := objs_$(LIBNAME)
 LIBFILE=$(LIB_DIR)/lib$(LIBNAME).so
 
-INCLUDES = -I./include -I../ -I../sectionparser/include -I../common/include -I../boost -I../sqlite3pp -I./interfaces
+INCLUDES = -I./include -I../ -I../sectionparser/include -I../common/include -I../boost -I../sqlite3pp -I./interfaces -I../jansson/src
 
 COMPILE_OPTIONS = -Wall -Wextra -Wunused -fPIC -D_REENTRANT -std=c++0x
 

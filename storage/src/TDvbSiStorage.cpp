@@ -1610,7 +1610,7 @@ void TDvbSiStorage::ClearCachedTables()
 
 bool TDvbSiStorage::IsTuneDone()
 {
-  while(CurrentTuneStatus) {
+  while(!CurrentTuneStatus) {
     usleep(100000);
   }
   return true; 
@@ -1619,23 +1619,25 @@ bool TDvbSiStorage::IsTuneDone()
 // public function implementations.
 
 TDvbSiStorage::TDvbSiStorage(const uint32_t& freq, const TModulationMode& modulation, const uint32_t& symblRate,
-  const uint16_t& prefNetworkId, const std::string& dbFile)
+  const uint16_t& prefNetworkId, const std::string& dbFile, const std::string& networkConfigFile)
   : HomeTsFrequency(freq),
     HomeTsModulationMode(modulation),
     HomeTsSymbolRate(symblRate),
     PreferredNetworkId(prefNetworkId),
     DbFilePath(dbFile),
+    NetworkConfigJsonFile(networkConfigFile),
     BackGroundScanInterval(21600),
     IsFastScan(false),
     CurrentTuneStatus(false),
-    TunerIndex(0)
+    TunerIndex(0),
+    JsonParser (new TDvbJanssonParser(NetworkConfigJsonFile))
 {
   // Empty
 }
 
 TDvbSiStorage::~TDvbSiStorage()
 {
-  // Empty
+  JsonParser.reset();
 }
 
 TFileStatus TDvbSiStorage::CreateDatabase()
@@ -1688,31 +1690,8 @@ void TDvbSiStorage::SetBarkerInfo(const uint32_t& barkerFreq, const TModulationM
   BarkerSymbolRate = barkSymbRate;
   BarkerModulationMode = barkMod;
 }
-#if 0
-void TDvbSiStorage::StopScanThread()
-{
-  OS_LOG(DVB_INFO, "%s(): called\n", __FUNCTION__);
-  std::unique_lock<std::mutex> lk(ScanMutex);
-  if (DvbScanStatus.ScanState == TDvbScanState::SCAN_STOPPED) {
-    OS_LOG(DVB_INFO,   "%s(): scan is already stopped\n", __FUNCTION__);
-    return;
-  }
-  while (DvbScanStatus.ScanState != TDvbScanState::SCAN_STOPPED) {
-    OS_LOG(DVB_INFO,   "%s(): sending stop request\n", __FUNCTION__);
-    lk.unlock();
-    ThreadScanCondition.notify_one();
-    sleep(3);
-    lk.lock();
-  }
-  if (ScanThreadObject.joinable()) {
-    ScanThreadObject.join();
-  }
-  OS_LOG(DVB_INFO,   "%s(): done\n", __FUNCTION__);
-}
-#endif
 
 // IDvbStorageSubject
-
 void TDvbSiStorage::RegisterDvbStorageObserver(IDvbStorageObserver* observerObject)
 {
   ObserverVector.push_back(observerObject);
@@ -1750,4 +1729,26 @@ void TDvbSiStorage::ScanThreadInit(void *arg)
 void TDvbSiStorage::UpdateScanType(bool isFastScan)
 {
   IsFastScan = isFastScan;
+}
+
+
+void TDvbSiStorage::UpdateTuneStatus(bool isTuneSuccess)
+{
+  CurrentTuneStatus = isTuneSuccess;
+}
+
+
+std::vector<std::shared_ptr<TDvbStorageNamespace::InbandTableInfoStruct>> TDvbSiStorage::GetInbandTableInfo(std::string& profile)
+{
+  return JsonParser->GetInbandTableInfo(profile);
+}
+
+std::string TDvbSiStorage::GetProfiles()
+{
+  return JsonParser->GetProfiles();
+}
+
+bool TDvbSiStorage::SetProfiles(std::string& profiles)
+{
+  return JsonParser->SetProfiles(profiles);
 }

@@ -27,7 +27,7 @@ class IDvbSectionParserSubject
 public:
   virtual void RegisterDvbSectionParserObserver(IDvbSectionParserObserver* observerObject) = 0;
   virtual void RemoveDvbSectionParserObserver(IDvbSectionParserObserver* observerObject) = 0;
-  virtual void NotifyDvbSectionParserObserver(const uint8_t *data, uint32_t dataLen) = 0;
+  virtual void NotifyDvbSectionParserObserver(uint32_t eventType, void *eventData, size_t dataSize) = 0;
 };
 
 #endif // IDVBSECTIONPARSERSUBJECT_H

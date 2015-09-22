@@ -20,9 +20,12 @@
 #ifndef IDVBSECTIONPARSEROBSERVER
 #define IDVBSECTIONPARSEROBSERVER
 
+#include <cstddef>
+#include <cstdint>
+
 class IDvbSectionParserObserver {
 public:
-  virtual void UpdateData(const uint8_t *data, uint32_t dataLen) = 0;
+  virtual void SendEvent(uint32_t eventType, void *eventData, size_t dataSize) = 0;
 };
 
 #endif // IDVBSECTIONPARSEROBSERVER 

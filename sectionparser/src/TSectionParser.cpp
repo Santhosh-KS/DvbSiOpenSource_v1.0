@@ -221,7 +221,7 @@ void TSectionParser::ParseSiData(uint8_t *data, uint32_t size)
         // Need to eliminate this.
         //sendEvent((uint32_t)section->TableId, p, size);
         // TODO: KSS as to keep things as before need to have the call back mechanism to notify the observers about the SI data.
-        NotifyDvbSectionParserObserver(p, size);
+        NotifyDvbSectionParserObserver((uint32_t)section->TableId, p, size);
 #else
         // Let's check if the table became complete
         if(secList.GetCompletenessFlag())
@@ -485,6 +485,7 @@ void TSectionParser::ParseSiData(uint8_t *data, uint32_t size)
 
                 // Let's publish the event
                 //sendEvent((uint32_t)tbl->GetTableId(), tbl, 0);
+                NotifyDvbSectionParserObserver((uint32_t)tbl->GetTableId(), tbl, 0);
 // TODO: Rework on the sendeventcallback
                 //SendEventCallback((uint32_t)tbl->GetTableId(), tbl, 0);
                 // Call platform ipc mechinism (callback)
@@ -521,11 +522,11 @@ void TSectionParser::RemoveDvbSectionParserObserver(IDvbSectionParserObserver* o
   ObserverVector.erase(std::remove(ObserverVector.begin(), ObserverVector.end(), observerObject), ObserverVector.end());
 }
 
-void TSectionParser::NotifyDvbSectionParserObserver(const uint8_t *data, uint32_t dataLen)
+void TSectionParser::NotifyDvbSectionParserObserver(uint32_t eventType, void *eventData, size_t dataSize)
 {
   std::vector<IDvbSectionParserObserver*>::const_iterator iter = ObserverVector.begin();
   for (; iter != ObserverVector.end(); ++iter) {
-    (*iter)->UpdateData(data, dataLen);
+    (*iter)->SendEvent(eventType, eventData, dataSize);
   }
 
 }

@@ -24,12 +24,14 @@
 #include "TBatTable.h"
 #include "TDvbDb.h"
 #include "TDvbStorageNamespace.h"
+#include "TDvbJanssonParser.h"
 #include "TEitTable.h"
 #include "TNitTable.h"
 #include "TSdtTable.h"
 #include "TSiTable.h"
 #include "TTransportStream.h"
 #include "TTotTable.h"
+#include "boost/scoped_ptr.hpp"
 
 #include <condition_variable>
 #include <map>
@@ -49,11 +51,13 @@ private:
   const uint32_t& HomeTsSymbolRate;
   const uint16_t& PreferredNetworkId;
   const std::string& DbFilePath;
+  const std::string& NetworkConfigJsonFile;
   uint32_t BackGroundScanInterval; 
   bool IsFastScan;
   bool CurrentTuneStatus;
   uint8_t TunerIndex;
   TDvbDb StorageDb;
+  boost::scoped_ptr<TDvbJanssonParser> JsonParser;
   std::mutex CacheDataMutex;
   std::mutex ScanMutex;
   std::condition_variable ThreadScanCondition;
@@ -97,14 +101,7 @@ private:
   uint32_t BarkerSymbolRate;
   uint32_t BarkerEitTimout; 
   TDvbStorageNamespace::TModulationMode BarkerModulationMode;
-#if 0
-  std::vector<uint16_t> HomeBouquetsVector;
-  uint32_t BarkerFrequency;
-  TDvbStorageNamespace::TModulationMode BarkerModulationMode;
-  uint32_t BarkerSymbolRate;
-  uint32_t BackGroundScanInterval; 
-  uint32_t BarkerEitTimout; 
-#endif
+
   std::map<uint16_t, std::shared_ptr<TNitTable>> NitTableMap; 
   void HandleNitEvent(const TNitTable& nit);
   void ProcessNitEventCache(const TNitTable& nit);
@@ -133,7 +130,6 @@ private:
   int64_t ProcessEventItem(const std::vector<TMpegDescriptor>& descList, int64_t event_fk);
 
   // Scan thread related functions
-  std::thread ScanThreadObject;
   void ScanThread();
   bool IsFastScanEnabled();
   bool IsBackgroundScanEnabled();
@@ -146,7 +142,7 @@ private:
   bool IsTuneDone();
 public:
   TDvbSiStorage(const uint32_t& homeTsFreq, const TDvbStorageNamespace::TModulationMode& modulation,
-    const uint32_t& homeTsSymbRate, const uint16_t& prefNetworkId, const std::string& dbFile);
+    const uint32_t& homeTsSymbRate, const uint16_t& prefNetworkId, const std::string& dbFile, const std::string& networkConfigFile);
   ~TDvbSiStorage();
   TDvbStorageNamespace::TFileStatus CreateDatabase();
   void HandleTableEvent(const TSiTable& tbl);
@@ -154,6 +150,10 @@ public:
   void UpdateScanType(bool isFastScan);
   void UpdateTuneStatus(bool isTuneSuccess);
   static void ScanThreadInit(void *arg);
+
+  std::vector<std::shared_ptr<TDvbStorageNamespace::InbandTableInfoStruct>> GetInbandTableInfo(std::string& profile);
+  std::string GetProfiles();
+  bool SetProfiles(std::string& profiles);
 
   // IDvbStorageSubject
   virtual void RegisterDvbStorageObserver(IDvbStorageObserver* observerObject);
