@@ -151,7 +151,7 @@ public:
   void UpdateTuneStatus(bool isTuneSuccess);
   static void ScanThreadInit(void *arg);
 
-  std::vector<shared_ptr<TStorageTransportStreamStruct>> GetTsListByNetId(uint16_t nId);
+  std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetId(uint16_t nId);
   std::vector<std::shared_ptr<TDvbStorageNamespace::InbandTableInfoStruct>> GetInbandTableInfo(std::string& profile);
   std::string GetProfiles();
   bool SetProfiles(std::string& profiles);

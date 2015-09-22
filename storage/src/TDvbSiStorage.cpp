@@ -1753,9 +1753,9 @@ bool TDvbSiStorage::SetProfiles(std::string& profiles)
   return JsonParser->SetProfiles(profiles);
 }
 
-vector<shared_ptr<TStorageTransportStreamStruct>> TDvbSiStorage::GetTsListByNetId(uint16_t nId)
+std::vector<std::shared_ptr<TStorageTransportStreamStruct>> TDvbSiStorage::GetTsListByNetId(uint16_t nId)
 {
-  vector<shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> ret;
+  std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> ret;
   uint16_t networkId;
 
   if (nId != 0) {
@@ -1801,7 +1801,7 @@ vector<shared_ptr<TStorageTransportStreamStruct>> TDvbSiStorage::GetTsListByNetI
       OS_LOG(DVB_DEBUG,   "<%s> onId: %d tsId: %d frequency: %d mod: %d symbolRate: %d\n", __FUNCTION__, onId, tsId, frequency, mod, symbolRate);
 
       std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct> ts(new TStorageTransportStreamStruct(static_cast<uint32_t>(frequency),
-        mapModulationMode((DVBConstellation)mod),
+        MapModulationMode((TDVBConstellation)mod),
         static_cast<uint32_t>(symbolRate), static_cast<uint16_t>(onId),
         static_cast<uint16_t>(tsId)));
         ret.push_back(ts);
