@@ -1470,6 +1470,114 @@ bool TDvbSiStorage::CheckCacheTableCollections(std::vector<std::shared_ptr<TSiTa
   return false;
 }
 
+std::vector<std::shared_ptr<TDvbStorageNamespace::EventStruct>> TDvbSiStorage::GetEventListByServiceId(uint16_t nId, uint16_t tsId, uint16_t sId)
+{
+  std::vector<std::shared_ptr<TDvbStorageNamespace::EventStruct>> ret;
+  std::string cmdStr("SELECT e.network_id, e.transport_id, e.service_id, e.event_id, e.start_time, e.duration, " \
+    " ei.title, ei.description FROM EventItem ei "                                              \
+    " INNER JOIN Event e "                                                                      \
+    " ON ei.event_fk = e.event_pk "                                                             \
+    "WHERE e.network_id = ");
+
+  std::stringstream ss;
+  ss << nId;
+  cmdStr += ss.str();
+  cmdStr += " AND e.transport_id = ";
+
+  ss.str("");
+  ss << tsId;
+  cmdStr += ss.str();
+  cmdStr += " AND e.service_id = ";
+
+  ss.str("");
+  ss << sId;
+  cmdStr += ss.str();
+  cmdStr += " ORDER BY e.event_id ASC;";
+
+  std::vector<std::vector<std::string>> results = StorageDb.QueryDb(cmdStr);
+
+  OS_LOG(DVB_DEBUG,   "<%s> nid.tsid.sid = %d.%d.%d num rows: %lu\n", __FUNCTION__, nId, tsId, sId, results.size());
+
+  for (std::vector<std::vector<std::string>>::iterator it = results.begin(); it != results.end(); ++it) {
+    std::vector<std::string> row = *it;
+  // number of columns in select statement
+    if (row.size() == 8) {
+      int onId;
+      int tsId;
+      int serviceId;
+      int eventId;
+      long long int startTime;
+      int duration;
+
+      std::stringstream(row.at(0)) >> onId;
+      std::stringstream(row.at(1)) >> tsId;
+      std::stringstream(row.at(2)) >> serviceId;
+      std::stringstream(row.at(3)) >> eventId;
+      std::stringstream(row.at(4)) >> startTime;
+      std::stringstream(row.at(5)) >> duration;
+      std::string title = row.at(6);
+      std::string description = row.at(7);
+
+      OS_LOG(DVB_TRACE1,   "<%s> nId: %d tsId: %d serviceId: %d eventId: %d startTime: %lld " \
+        "duration: %d title length: %lu description length: %lu\n", __FUNCTION__, nId, tsId, serviceId, 
+        eventId, startTime, duration, title.size(), description.size());
+
+      std::shared_ptr<TDvbStorageNamespace::Event> event(new Event);
+        event->NetworkId = nId;
+        event->TransportStreamId = tsId;
+        event->ServiceId = serviceId;
+        event->EventId = eventId;
+        event->StartTime = startTime;
+        event->Duration = duration;
+        event->EventName = title;
+        event->EventText = description;
+      ret.push_back(event);
+    }
+  }
+  return ret;
+}
+
+std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> TDvbSiStorage::GetServiceListByTsId(uint16_t nId, uint16_t tsId)
+{
+  std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> ret;
+  std::string cmdStr("SELECT t.original_network_id, t.transport_id, s.service_id, s.service_name FROM Service s " \
+    " INNER JOIN Transport t "                                                                   \
+    " ON s.transport_fk = t.transport_pk "                                                       \
+    "WHERE t.original_network_id = ");
+
+  std::stringstream ss;
+  ss << nId;
+  cmdStr += ss.str();
+  cmdStr += " AND t.transport_id = ";
+
+  ss.str("");
+  ss << tsId;
+  cmdStr += ss.str();
+  cmdStr += " ORDER BY s.service_id ASC;";
+  std::vector<std::vector<std::string>> results = StorageDb.QueryDb(cmdStr);
+  OS_LOG(DVB_DEBUG,   "<%s> nid.tsid = %d.%d num rows: %lu\n", __FUNCTION__, nId, tsId, results.size());
+
+  for (std::vector<std::vector<std::string>>::iterator it = results.begin(); it != results.end(); ++it) {
+    std::vector<std::string> row = *it;
+  // number of columns in select statement
+    if (row.size() == 4) {
+      int onId;
+      int tsId;
+      int serviceId;
+
+      std::stringstream(row.at(0)) >> onId;
+      std::stringstream(row.at(1)) >> tsId;
+      std::stringstream(row.at(2)) >> serviceId;
+      std::string serviceName = row.at(3);
+      OS_LOG(DVB_DEBUG,   "<%s> onId: %d tsId: %d serviceId: %d %s\n", __FUNCTION__, onId, tsId, serviceId, serviceName.c_str());
+      std::shared_ptr<TDvbStorageNamespace::Service> service(new Service(static_cast<uint16_t>(onId),
+        static_cast<uint16_t>(tsId), static_cast<uint16_t>(serviceId), serviceName));
+      ret.push_back(service);
+    }
+  }
+  return ret;
+}
+
 std::vector<std::shared_ptr<ServiceStruct>> TDvbSiStorage::GetServiceListByTsIdCache(uint16_t nId, uint16_t tsId)
 {
   std::vector<std::shared_ptr<ServiceStruct>> ret;
@@ -1650,6 +1758,7 @@ TFileStatus TDvbSiStorage::CreateDatabase()
     StorageDb.CreateTables();
     status = FILE_STATUS_CREATED;
   }
+  return status;
 }
 
 void TDvbSiStorage::HandleTableEvent(const TSiTable& tbl)
@@ -1808,4 +1917,10 @@ std::vector<std::shared_ptr<TStorageTransportStreamStruct>> TDvbSiStorage::GetTs
     }
   }
   return ret;
+}
+
+TDvbScanStatus TDvbSiStorage::GetScanStatus()
+{
+  OS_LOG(DVB_INFO,   "%s:%d DvbScanStatus.tsList.size() = %lu\n", __FUNCTION__, __LINE__, DvbScanStatus.TsList.size());
+  return DvbScanStatus;
 }

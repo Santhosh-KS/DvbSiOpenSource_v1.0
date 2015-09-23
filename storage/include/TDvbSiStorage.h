@@ -71,7 +71,7 @@ private:
     DVB_CONSTELLATION_QAM128,
     DVB_CONSTELLATION_QAM256
   };
-
+#if 0
   enum TDvbScanState {
     SCAN_STOPPED,
     SCAN_STARTING,
@@ -94,8 +94,7 @@ private:
     TDvbScanState ScanState;
     std::vector<std::pair<uint32_t, TDvbSiTableStatus>> TsList;
   };
-
-  TDvbScanStatus DvbScanStatus;
+#endif
   std::vector<uint16_t> HomeBouquetsVector;
   uint32_t BarkerFrequency;
   uint32_t BarkerSymbolRate;
@@ -141,6 +140,7 @@ private:
   void ClearCachedTables();
   bool IsTuneDone();
 public:
+  TDvbStorageNamespace::TDvbScanStatus DvbScanStatus;
   TDvbSiStorage(const uint32_t& homeTsFreq, const TDvbStorageNamespace::TModulationMode& modulation,
     const uint32_t& homeTsSymbRate, const uint16_t& prefNetworkId, const std::string& dbFile, const std::string& networkConfigFile);
   ~TDvbSiStorage();
@@ -152,7 +152,10 @@ public:
   static void ScanThreadInit(void *arg);
 
   std::vector<std::shared_ptr<TDvbStorageNamespace::TStorageTransportStreamStruct>> GetTsListByNetId(uint16_t nId);
+  std::vector<std::shared_ptr<TDvbStorageNamespace::ServiceStruct>> GetServiceListByTsId(uint16_t nId, uint16_t tsId);
+  std::vector<std::shared_ptr<TDvbStorageNamespace::EventStruct>> GetEventListByServiceId(uint16_t nId, uint16_t tsId, uint16_t sId);
   std::vector<std::shared_ptr<TDvbStorageNamespace::InbandTableInfoStruct>> GetInbandTableInfo(std::string& profile);
+  TDvbStorageNamespace::TDvbScanStatus GetScanStatus();
   std::string GetProfiles();
   bool SetProfiles(std::string& profiles);
 

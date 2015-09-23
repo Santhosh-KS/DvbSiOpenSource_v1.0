@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 namespace TDvbStorageNamespace
 {
@@ -133,5 +134,26 @@ namespace TDvbStorageNamespace
     uint8_t  TableId;
   } InbandTableInfoStruct;
 
+  enum TDvbScanState {
+    SCAN_STOPPED,
+    SCAN_STARTING,
+    SCAN_IN_PROGRESS_FAST,
+    SCAN_IN_PROGRESS_BKGD,
+    SCAN_COMPLETED,
+    SCAN_FAILED
+  };
+
+  struct TDvbSiTableStatus {
+    bool NitAcquired;
+    bool BatAcquired;
+    bool SdtAcquired;
+    bool EitPfAcquired;
+    bool EitAcquired;
+  };
+
+  struct TDvbScanStatus {
+    TDvbScanState ScanState;
+    std::vector<std::pair<uint32_t, TDvbSiTableStatus>> TsList;
+  };
 }
 #endif // TDVBSTORAGENAMESPACE_H
