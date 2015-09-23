@@ -16,7 +16,8 @@ COMPILE_OPTIONS = -Wall -Wextra -Wunused -fPIC -D_REENTRANT -std=c++0x
 CFLAGS += $(COMPILE_OPTIONS) $(INCLUDES)
 
 OBJS = $(OBJ_DIR)/TDvbDb.o \
-	$(OBJ_DIR)/TDvbSiStorage.o
+	$(OBJ_DIR)/TDvbSiStorage.o \
+	$(OBJ_DIR)/TDvbJanssonParser.o
 
 all: $(LIBFILE)
 
