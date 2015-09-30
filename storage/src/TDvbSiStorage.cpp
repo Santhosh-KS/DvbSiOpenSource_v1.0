@@ -1188,7 +1188,7 @@ bool TDvbSiStorage::IsFastScanEnabled()
     else {
       OS_LOG(DVB_INFO,   "%s:%d: tune(%d)\n", __FUNCTION__, __LINE__, (*it)->Frequency);
       NotifyDvbStorageTuneObserver((*it)->Frequency, (*it)->Modulation, (*it)->SymbolRate);
-      IsTuneDone();
+ //     IsTuneDone();
 // TODO: KSS
 #if 0
             RMFResult ret = tuner.tune((*it)->Frequency, (*it)->modulation, (*it)->symbolRate);
