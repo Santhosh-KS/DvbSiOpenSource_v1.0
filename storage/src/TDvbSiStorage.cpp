@@ -1752,12 +1752,14 @@ TFileStatus TDvbSiStorage::CreateDatabase()
 {
   TFileStatus status(FILE_STATUS_ERROR);
   status = StorageDb.CreateDbFile(DbFilePath);
+#if 0
   if (status == TFileStatus::FILE_STATUS_OPENED) {
     // flush old entires if any.
     StorageDb.DropTables();
     StorageDb.CreateTables();
-    status = FILE_STATUS_CREATED;
   }
+#endif
+  status = FILE_STATUS_CREATED;
   return status;
 }
 
