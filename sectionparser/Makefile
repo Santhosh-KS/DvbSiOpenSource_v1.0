@@ -10,7 +10,7 @@ LIBFILE=$(LIB_DIR)/lib$(LIBNAME).so
 
 INCLUDES = -I./include -I../common/include -I./interfaces
 
-COMPILE_OPTIONS = -Wall -Wextra -Wunused -fPIC -D_REENTRANT -std=c++0x
+COMPILE_OPTIONS = -Wall -Wextra -Wunused -fPIC -D_REENTRANT -std=c++0x -fno-short-enums -g -O2 -Wall -fno-strict-aliasing
 
 CFLAGS += $(COMPILE_OPTIONS) $(INCLUDES)
 

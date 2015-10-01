@@ -12,7 +12,7 @@ LIBFILE=$(LIB_DIR)/lib$(LIBNAME).so
 
 INCLUDES = -I./include -I../ -I../sectionparser/include -I../common/include -I../boost -I../sqlite3pp -I./interfaces -I../jansson/src
 
-COMPILE_OPTIONS = -Wall -Wextra -Wunused -fPIC -D_REENTRANT -std=c++0x
+COMPILE_OPTIONS = -Wall -Wextra -Wunused -fPIC -D_REENTRANT -std=c++0x -fno-short-enums -g -O2 -Wall -fno-strict-aliasing
 
 CFLAGS += $(COMPILE_OPTIONS) $(INCLUDES) 
 
