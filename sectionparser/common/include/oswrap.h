@@ -1,4 +1,3 @@
-//
 // DVB_SI for Reference Design Kit (RDK)
 //
 // Copyright (C) 2015  Dmitry Barablin & Stan Partridge (stan.partridge@arris.com)
