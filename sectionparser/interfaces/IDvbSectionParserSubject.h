@@ -1,6 +1,6 @@
 // DVB_SI for Reference Design Kit (RDK)
 //
-// Copyright (C) 2015 Santhosh KS(Santhosh.KS@arris.com) & Manu Shrot (Manu.Shrot@arris.com)
+// Copyright (c) 2015 SanthoshKS(Santhosh.KS@arris.com)& ManuShrot(Manu.Shrot@arris.com)
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
