@@ -33,9 +33,6 @@ using namespace std;
 using namespace sqlite3pp;
 using namespace TDvbStorageNamespace;
 
-/**
- * Static Initialization
- */
 
 const StringVector TDvbDb::DatabaseTables =
 {
@@ -383,9 +380,9 @@ TFileStatus  TDvbDb::CreateDbFile(const std::string& dbname)
   }
 
   if (status != FILE_STATUS_OPENED) {
-    std::remove(DbFileName.c_str()); // remove db file
+    std::remove(DbFileName.c_str());
 
-    status = OpenDb(SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);  // create Db file
+    status = OpenDb(SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
     if (status == FILE_STATUS_OPENED) {
       OS_LOG(DVB_DEBUG,  "<%s> - Created database: %s\n", __FUNCTION__, DbFileName.c_str());
       status = FILE_STATUS_CREATED;
@@ -612,7 +609,7 @@ void  TDvbDb::ClearScanSettings()
 int64_t TDvbDb::FindPrimaryKey(string& queryStr)
 {
   std::lock_guard<std::mutex> lock(DbMutex);
-  int64_t key(0);  // invalid key
+  int64_t key(0);
 
   try {
     sqlite3pp::query qry(Sqlite3ppWrapper, queryStr.c_str());
@@ -641,7 +638,7 @@ int64_t TDvbDb::FindPrimaryKey(string& queryStr)
 int64_t TDvbDb::FindPrimaryKey(string& queryStr, int8_t& version)
 {
   std::lock_guard<std::mutex> lock(DbMutex);
-  int64_t key(0);  // invalid key
+  int64_t key(0);
 
   try {
     sqlite3pp::query qry(Sqlite3ppWrapper, queryStr.c_str());
@@ -1185,4 +1182,3 @@ void TDvbDb::TTransaction::RollBackSqlStatement()
     Sqlite3ppWrapperTransaction->rollback();
   } 
 }
-

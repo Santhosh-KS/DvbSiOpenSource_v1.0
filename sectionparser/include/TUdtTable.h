@@ -64,7 +64,6 @@ public:
     return SiSectionVector;
   }
 
-  //void removeSections()
   void FlushSections()
   {
     SiSectionVector.clear();

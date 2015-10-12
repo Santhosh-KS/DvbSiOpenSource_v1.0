@@ -66,7 +66,6 @@ public:
     return NetworkDescriptorVector;
   }
 
-  // void removeNetworkDescriptors()
   void FlushNetworkDescriptors()
   {
     NetworkDescriptorVector.clear();
@@ -82,7 +81,6 @@ public:
     return TransportStreamVector;
   }
 
-  //void removeTransportStreams()
   void FlushTransportStreams()
   {
     TransportStreamVector.clear();

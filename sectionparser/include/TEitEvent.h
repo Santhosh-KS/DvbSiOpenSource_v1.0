@@ -77,7 +77,6 @@ public:
     EventDescriptorVector.insert(EventDescriptorVector.end(), descriptors.begin(), descriptors.end());
   }
 
-  //void removeDescriptors()
   void FlushDescriptors()
   {
     EventDescriptorVector.clear();

@@ -78,7 +78,6 @@ public:
     TsDescriptorVector.insert(TsDescriptorVector.end(), descriptors.begin(), descriptors.end());
   }
 
-  // void removeDescriptors()
   void FlushDescriptors()
   {
     TsDescriptorVector.clear();

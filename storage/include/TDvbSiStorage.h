@@ -72,30 +72,6 @@ private:
     DVB_CONSTELLATION_QAM128,
     DVB_CONSTELLATION_QAM256
   };
-#if 0
-  enum TDvbScanState {
-    SCAN_STOPPED,
-    SCAN_STARTING,
-    SCAN_IN_PROGRESS_FAST,
-    SCAN_IN_PROGRESS_BKGD,
-    SCAN_COMPLETED,
-    SCAN_FAILED
-  };
-
-  struct TDvbSiTableStatus {
-    bool NitAcquired;
-    bool BatAcquired;
-    bool SdtAcquired;
-    bool EitPfAcquired;
-    bool EitAcquired;
-  };
-
-
-  struct TDvbScanStatus {
-    TDvbScanState ScanState;
-    std::vector<std::pair<uint32_t, TDvbSiTableStatus>> TsList;
-  };
-#endif
   std::vector<uint16_t> HomeBouquetsVector;
   uint32_t BarkerFrequency;
   uint32_t BarkerSymbolRate;

@@ -63,44 +63,9 @@
 using std::map;
 using std::pair;
 
-#if 0
-/**
- * Callback function to free event data
- *
- * @param eventData event data
- */
-void freeEventData(void *eventData)
-{
-    // Sanity check
-    if(!eventData)
-    {
-        OS_LOG(DVB_ERROR,  "<%s> event data is null\n", __FUNCTION__);
-        return;
-    }
-#ifdef DVB_SECTION_OUTPUT
-    OS_LOG(DVB_TRACE3,  "<%s> event data = %p\n", __FUNCTION__, eventData);
-    delete eventData;
-#else
-    // event data is supposed to point to an SiTable object
-    TSiTable* tbl = reinterpret_cast<TSiTable*>(eventData);
-    OS_LOG(DVB_TRACE3,  "<%s> table_id = 0x%x\n", __FUNCTION__, tbl->GetTableId());
-
-    // clean up
-    delete tbl;
-    OS_LOG(DVB_TRACE3,  "<%s> tabled freed\n", __FUNCTION__);
-    tbl = NULL;
-#endif
-}
-#endif
-
-
-/*TSectionParser::TSectionParser(void* context, SendEventCallback callback)
-  : m_context(context),
-    m_sendEventCb(callback)
-*/
-//TSectionParser::TSectionParser(rmf_osal_eventmanager_handle_t eventMgr): m_eventMgr(eventMgr)
 TSectionParser::TSectionParser()
 {
+  // Empty
 }
 
 TSectionParser::~TSectionParser()
@@ -108,44 +73,6 @@ TSectionParser::~TSectionParser()
   ObserverVector.clear();
 }
 
-/**
- * Send a table event using the event manager
- * to let the subscribers know about the new table
- *
- * @param eventType event type
- * @param eventData event data
- * @param dataSize data size
-*/
-#if 0 
-void TSectionParser::sendEvent(uint32_t eventType, void *eventData, size_t dataSize)
-{
-    rmf_Error ret;
-    rmf_osal_event_handle_t eventHandle;
-    rmf_osal_event_params_t eventParams = {};
-
-    // Let's set the event parameters
-    eventParams.data = eventData;
-    eventParams.data_extension = dataSize;
-    eventParams.free_payload_fn = freeEventData;
-
-    // Time to create the event itself
-    ret = rmf_osal_event_create(RMF_OSAL_EVENT_CATEGORY_INB_FILTER, eventType, &eventParams, &eventHandle);
-    if (RMF_SUCCESS != ret)
-    {
-        OS_LOG(DVB_ERROR,  "<%s:%d> Event creation failed\n", __FUNCTION__, __LINE__);
-        return;
-    }
-
-    // Sending
-    ret = rmf_osal_eventmanager_dispatch_event(m_eventMgr, eventHandle);
-    if (RMF_SUCCESS != ret)
-    {
-        OS_LOG(DVB_ERROR,  "<%s:%d> Event dispatch failed\n", __FUNCTION__, __LINE__);
-        // clean up
-        rmf_osal_event_delete(eventHandle);
-    }
-}
-#endif
 /**
  * Check if tables of certain type are supported or not.
  * Note that some optional DVB tables might not be supported.
@@ -217,10 +144,6 @@ void TSectionParser::ParseSiData(uint8_t *data, uint32_t size)
         std::copy(data, data + size, p);
 
         // Let's publish the event right away
-        // TODO: KSS I really don't understand why this sendevent being called from here.
-        // Need to eliminate this.
-        //sendEvent((uint32_t)section->TableId, p, size);
-        // TODO: KSS as to keep things as before need to have the call back mechanism to notify the observers about the SI data.
         NotifyDvbSectionParserObserver((uint32_t)section->TableId, p, size);
 #else
         // Let's check if the table became complete
@@ -484,17 +407,7 @@ void TSectionParser::ParseSiData(uint8_t *data, uint32_t size)
 #endif // DVB_TABLE_DEBUG
 
                 // Let's publish the event
-                //sendEvent((uint32_t)tbl->GetTableId(), tbl, 0);
                 NotifyDvbSectionParserObserver((uint32_t)tbl->GetTableId(), tbl, 0);
-// TODO: Rework on the sendeventcallback
-                //SendEventCallback((uint32_t)tbl->GetTableId(), tbl, 0);
-                // Call platform ipc mechinism (callback)
-//TODO: KSS
-  /*              if(m_context && m_sendEventCb)
-                {
-                    // Let's publish the event
-                    m_sendEventCb(m_context, (uint32_t)tbl->GetTableId(), tbl, 0);
-                }*/
             }
         }
         else // isComplete()

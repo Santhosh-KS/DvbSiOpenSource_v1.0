@@ -71,7 +71,6 @@ public:
     return BouquetDescriptorsVector;
   }
 
-  //    void removeBouquetDescriptors()
   inline void FlushBouquetDescriptors()
   {
     BouquetDescriptorsVector.clear();
@@ -87,7 +86,6 @@ public:
     return TransportStreamVector;
   }
 
-  // void removeTransportStreams()
   inline void FlushTransportStreams()
   {
     TransportStreamVector.clear();

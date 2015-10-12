@@ -55,7 +55,6 @@ public:
     return SdtServiceVector;
   }
 
-  //void removeServices()
   inline void FlushServices()
   {
     SdtServiceVector.clear();

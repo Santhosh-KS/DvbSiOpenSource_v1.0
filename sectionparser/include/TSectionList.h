@@ -68,7 +68,6 @@ public:
 
   bool AddSiSection(TSiSection& section);
 
-  // TODO: KSS chk if this needs to be private?
   TSiTable* BuildTable();
 
   bool GetCompletenessFlag() const

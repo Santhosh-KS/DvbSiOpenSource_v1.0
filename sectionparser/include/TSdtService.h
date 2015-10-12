@@ -76,7 +76,6 @@ public:
     ServiceDescriptorVector.insert(ServiceDescriptorVector.end(), descriptors.begin(), descriptors.end());
   }
   
-  // void removeDescriptors()
   inline void FlushDescriptors()
   {
     ServiceDescriptorVector.clear();

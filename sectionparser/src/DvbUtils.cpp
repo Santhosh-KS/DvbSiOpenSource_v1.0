@@ -29,7 +29,6 @@
 // Other libraries' includes
 
 // Project's includes
-//#include <rdk_debug.h> KSS
 #include "oswrap.h"
 #include "DvbUtils.h"
 

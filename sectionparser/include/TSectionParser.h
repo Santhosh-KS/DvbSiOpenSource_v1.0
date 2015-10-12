@@ -31,7 +31,6 @@
 #include "IDvbSectionParserObserver.h"
 
 typedef std::map<std::pair<uint8_t, uint16_t>, TSectionList> SectionMap_t;
-//typedef void (*SendEventCallback) (void*, uint32_t, void*, size_t);
 
 /**
  * TSectionParser
@@ -42,8 +41,7 @@ class TSectionParser : public IDvbSectionParserSubject
 {
 private:
   std::vector<IDvbSectionParserObserver*> ObserverVector;
-  // Make TSectioParser singleton.
-  // TODO: KSS check why this is made singleton
+  // Disable default copy contructor.
   TSectionParser(const TSectionParser& other);
   TSectionParser& operator=(const TSectionParser&);
 
